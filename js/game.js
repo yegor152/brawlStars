@@ -27,6 +27,7 @@ let audio = {
 }
 audio.f.play();
 audio.f.volume = 0.5;
+audio.a = audio.f;
 
 let map = []
 
@@ -289,8 +290,9 @@ function drawGame() {
     ctx.fillText(score, 0, 50);
 
 }
-
 let setI = setInterval(drawGame, 10);
+
+
 
 
 
