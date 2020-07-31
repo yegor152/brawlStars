@@ -123,16 +123,17 @@ class Batko {
 const macDiagonal13 = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(773 ** 2 + 1425 ** 2);
 
 class Bullet extends Batko {
-    constructor(x, y, angle, speed = 20 * macDiagonal13,
-                width = canvas.width / 285, height = canvas.height / 15, imgSrc = `img/bullet.png`) {
-        super(x, y, angle, speed, width, height, imgSrc);
+    constructor(x, y, angle) {
+        super(x, y, angle,  20 * macDiagonal13,
+            canvas.width / 285, canvas.height / 15, `img/bullet.png`);
     }
 }
 
 class Stone extends Batko {
-    constructor(x, y, angle, speed = 7 * macDiagonal13,
-                width = canvas.width / 114, height = canvas.height * 12.5 / 773, imgSrc = `img/stone.png`) {
-        super(x, y, angle, speed, width, height, imgSrc);
+    constructor(x, y, angle,parent) {
+        super(x, y, angle,   7 * macDiagonal13,
+            canvas.width / 114, canvas.height * 12.5 / 773, `img/stone.png`);
+        this.parent = parent;
     }
 }
 
@@ -163,7 +164,7 @@ class Frog extends Batko {
             setTimeout(()=>{
                 if(chertilas.has(this)) {
                     this.speed = speed;
-                    stones.add(new Stone(this.x, this.y, this.angle));
+                    stones.add(new Stone(this.x, this.y, this.angle,this));
                     audio.shootSound.play();
                     setTimeout(() => {
                         this.ableToShoot = true;
@@ -273,6 +274,12 @@ function drawGame() {
             if (collision(bullet,stone)){
             stones.delete(stone);
             bullets.delete(bullet);
+            }
+        }
+        for (chertila of chertilas){
+            if(collision(chertila,stone) && stone.parent !==chertila){
+                chertilas.delete(chertila);
+                stones.delete(stone);
             }
         }
     }
