@@ -1,12 +1,13 @@
 `use strict`
 
 let canvas = document.getElementById(`canvas`);
-canvas.width = document.documentElement.clientWidth * 0.99;
-canvas.height = document.documentElement.clientHeight * 0.98;
+canvas.width = document.documentElement.clientWidth*0.99;
+canvas.height = document.documentElement.clientHeight ;
 let ctx = canvas.getContext(`2d`);
 
 let score = 0;
 let paused = false;
+
 let aim = {
     width: canvas.width * 2 / 57,
     img: new Image(),
@@ -14,23 +15,16 @@ let aim = {
     y: 0,
 }
 aim.img.src = `img/aim.png`;
-document.addEventListener(`mousemove`, onMouseMove);
 
+document.addEventListener(`mousemove`, onMouseMove);
 function onMouseMove(event) {
     aim.x = event.clientX;
     aim.y = event.clientY;
 }
-
 let audio = {
     shootSound: new Audio(`audio/shootSound.mp3`),
     f: new Audio(`audio/f.mp3`),
 }
-audio.f.play();
-audio.f.volume = 0.5;
-audio.a = audio.f;
-
-let map = []
-
 
 class Point {
     constructor(x, y) {
@@ -38,7 +32,6 @@ class Point {
         this.y = y;
     }
 }
-
 class Line {
     constructor(p1, p2) {
         this.a = p2.y - p1.y;
@@ -56,7 +49,6 @@ class Line {
         }
     }
 }
-
 class Batko {
     constructor(x, y, angle, speed, width, height, imgSrc) {
         this._x = x;
@@ -120,37 +112,38 @@ class Batko {
     }
 }
 
-const macDiagonal13 = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / Math.sqrt(773 ** 2 + 1425 ** 2);
+const sizeCoefficient = canvas.width/1425;
+
 
 class Bullet extends Batko {
     constructor(x, y, angle) {
-        super(x, y, angle,  20 * macDiagonal13,
-            canvas.width / 285, canvas.height / 15, `img/bullet.png`);
+        super(x, y, angle,  20 * sizeCoefficient,
+            5*sizeCoefficient, 51.5*sizeCoefficient, `img/bullet.png`);
     }
 }
 
 class Stone extends Batko {
     constructor(x, y, angle,parent) {
-        super(x, y, angle,   7 * macDiagonal13,
-            canvas.width / 114, canvas.height * 12.5 / 773, `img/stone.png`);
+        super(x, y, angle,   7 * sizeCoefficient,
+            12.5*sizeCoefficient,  12.5*sizeCoefficient, `img/stone.png`);
         this.parent = parent;
     }
 }
-let stones = new Set();
+
 
 
 class Sponge extends Batko {
     constructor(x, y, angle,) {
-        super(x, y, angle,   macDiagonal13,  canvas.width / 57,
-             canvas.height * 50 / 773,  `img/sponge.png`);
+        super(x, y, angle,   sizeCoefficient,  25*sizeCoefficient,
+            50*sizeCoefficient,  `img/sponge.png`);
         this.type = `sponge`;
     }
 }
 
 class Frog extends Batko {
     constructor(x, y, angle) {
-        super(x, y, angle,  0.5 * macDiagonal13, canvas.width * 47 / 1425,
-            canvas.height * 50 / 773,  `img/frogOchka.png`);
+        super(x, y, angle,  0.5 * sizeCoefficient, 47*sizeCoefficient,
+            50* sizeCoefficient,  `img/frogOchka.png`);
         this.type = `frog`;
         this.ableToShoot = true;
     }
@@ -174,28 +167,60 @@ class Frog extends Batko {
     };
 }
 
-let chertilas = new Set();
-chertilas.add(new Sponge(100, 100, 0));
+class Cannon extends Batko {
+    constructor(x, y, angle) {
+        super(x, y, angle,  0.2 * sizeCoefficient, 25*sizeCoefficient,
+            50* sizeCoefficient,  `img/testSponge.png`);
+        this.type = `cannon`;
+        this.ableToShoot = true;
+        this.a = 0.05;
+        this.charging= false;
+        this.maxSpeed =  this.speed;
+    }
 
-
-let bullets = new Set();
-
-
-let crab = new Batko(canvas.width / 2, canvas.height / 2, 0, 5 * macDiagonal13,
-    75 / 1425 * canvas.width, 75 / 773 * canvas.height, `img/crab.png`)
-crab.shoot = function () {
-    bullets.add(new Bullet(this.x, this.y, this.angle));
-    audio.shootSound.play();
+    shoot() {
+        if (this.ableToShoot) {
+            this.charging = true;
+            this.speed = 0;
+            this.ableToShoot= false;
+            setTimeout(()=>{
+                if(chertilas.has(this)) {
+                    this.speed=-2;
+                    this.charging= false;
+                    stones.add(new Stone(this.x, this.y, this.angle,this));
+                    audio.shootSound.play();
+                    setTimeout(() => {
+                        this.ableToShoot = true;
+                    }, 3000);
+                }
+            },1000);
+        }
+    };
 }
-crab.life = 3;
 
+class Crab extends Batko{
+    constructor(x,y,angle,life) {
+        super(x,y,angle,5 * sizeCoefficient, 75*sizeCoefficient,
+            75*sizeCoefficient, `img/crab.png`);
+        this.life = life;
+    }
+    shoot(){
+        bullets.add(new Bullet(this.x, this.y, this.angle));
+        audio.shootSound.play();
+    }
+}
 
 let heart = {
     img: new Image(),
-    width: 50,
-    height: 50,
+    width: 50*sizeCoefficient,
+    height: 50*sizeCoefficient,
 }
 heart.img.src = `img/heart.png`;
+
+let stones = new Set();
+let bullets = new Set();
+let chertilas = new Set();
+let crab = new Crab(canvas.width/2,canvas.height/2,0,3);
 
 
 let pressedButtons = new Set();
@@ -224,11 +249,37 @@ function onClick(event) {
     crab.shoot();
 }
 
-
+let time = 0;
+let generateCoef = 0;
+const spongeSpawnCoeff = 120;
+const frogSpawnCoeff = 150;
+const cannonSpawnCoeff = 300;
+let currentChertila = `sponge`;
 function drawGame() {
     ctx.fillStyle = `#00ffff`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+///////////////////////////////generate chertila//////////////
+    time++;
+    generateCoef+= 1 + 0.0003*time;
+
+    while (generateCoef >= spongeSpawnCoeff) {
+        console.log(currentChertila);
+        if (generateCoef >= frogSpawnCoeff && currentChertila ===`frog`){
+            createChertila(`frog`);
+            generateCoef -= frogSpawnCoeff;
+            currentChertila = `sponge`
+        }
+        else if(currentChertila === "sponge"){
+            createChertila(`sponge`);
+            generateCoef -= spongeSpawnCoeff;
+            currentChertila = `frog`;
+        }
+        else{
+            break;
+        }
+    }
+//////////////////////////////////////////////////////////////
 
     trajectory(pressedButtons);
     rotateImg(crab.img, crab.angle, crab.x, crab.y, crab.width, crab.height);
@@ -241,18 +292,15 @@ function drawGame() {
             if (collision(bullet, chertila)) {
                 chertilas.delete(chertila);
                 bullets.delete(bullet);
-                createChertila(`sponge`);
-                createChertila(`frog`);
                 score++;
             }
         }
     }
 
-    
-
     for (let chertila of chertilas) {
         if(chertila.type === `sponge`) navigator(chertila);
         else if (chertila.type === `frog`) frogNavigator(chertila);
+        else if (chertila.type === `cannon`) cannonNavigator(chertila);
         rotateImg(chertila.img, chertila.angle, chertila.x, chertila.y, chertila.width, chertila.height);
 
         if (collision(crab, chertila)) {
@@ -273,8 +321,8 @@ function drawGame() {
         }
         for (let bullet of bullets){
             if (collision(bullet,stone)){
-            stones.delete(stone);
-            bullets.delete(bullet);
+                stones.delete(stone);
+                bullets.delete(bullet);
             }
         }
         for (chertila of chertilas){
@@ -301,134 +349,6 @@ function drawGame() {
 let setI = setInterval(drawGame, 10);
 
 
-
-
-
-
-function distanceBetweenPointAndLine(p, l) {
-    return Math.abs(l.a * p.x + l.b * p.y + l.c) / Math.sqrt(Math.pow(l.a, 2) + Math.pow(l.b, 2));
-}
-function halfCollision(c1, c2) {
-
-    for (let p of c2.corners) {
-        let res1 = distanceBetweenPointAndLine(p, c1.lines[0]) + distanceBetweenPointAndLine(p, c1.lines[1]);
-        let res2 = distanceBetweenPointAndLine(p, c1.lines[2]) + distanceBetweenPointAndLine(p, c1.lines[3]);
-        if (res1 < (c1.height + 0.0001) && res2 < (c1.width + 0.0001) &&
-            res1 > (c1.height - 0.0001) && res2 > (c1.width - 0.0001)) {
-            return true;
-        }
-    }
-    return false;
-}
-function collision(c1, c2) {
-    return halfCollision(c1, c2) || halfCollision(c2, c1);
-}
-
-
-
-function rotateImg(img, angle, x, y, width, height) {
-    ctx.save();
-    ctx.rotate(angle);
-    y -= height / 2;
-    x -= width / 2;
-
-    ctx.translate((x + width / 2) * Math.cos(angle) + (y + height / 2) * Math.sin(angle) - x - width / 2,
-        -(x + width / 2) * Math.sin(angle) + (y + height / 2) * Math.cos(angle) - y - height / 2);
-
-    ctx.drawImage(img, x, y, width, height);
-    ctx.restore();
-
-
-}
-
-function inField(object) {
-    if(object.x<object.width/2) return false;
-    if(object.x>canvas.width-object.width/2) return false;
-    if(object.y<object.height/2) return false;
-    if(object.y>canvas.height-object.height/2) return false;
-    return true;
-}
-
-function trajectory(set) {
-    crab.angle = Math.atan2(aim.x - crab.x, crab.y - aim.y);
-    if (set.has(`w`)) {
-        crab.y -= crab.speed;
-    }
-    if (set.has(`d`)) {
-        crab.x += crab.speed;
-    }
-    if (set.has(`s`)) {
-        crab.y += crab.speed;
-    }
-    if (set.has(`a`)) {
-        crab.x -= crab.speed;
-    }
-    crab.x = Math.max(crab.width/2,crab.x);
-    crab.x = Math.min(canvas.width- crab.width/2,crab.x);
-    crab.y = Math.max(crab.height/2,crab.y);
-    crab.y = Math.min(canvas.height-crab.height/2,crab.y);
-}
-function navigator(sponge) {
-    sponge.angle = Math.atan2(crab.x - sponge.x, sponge.y - crab.y);
-
-    simpleNavigator(sponge);
-}
-function frogNavigator(frog) {
-    navigator(frog);
-    if (inField(frog))frog.shoot();
-}
-function simpleNavigator(object) {
-    object.x += Math.sin(object.angle) * object.speed;
-    object.y -= Math.cos(object.angle) * object.speed;
-
-    if (!inField(object)) {
-        bullets.delete(object);
-        stones.delete(object);
-    }
-}
-function drawWarning(chertila) {
-    let img = new Image();
-    length = 50;
-    img.src = `img/warning.png`;
-    if (chertila.x<0)rotateImg(img,0,length/2,chertila.y,length,length);
-    if (chertila.y<0)rotateImg(img,0,chertila.x,length/2,length,length);
-    if (chertila.x>canvas.width)rotateImg(img,0,canvas.width-length/2,chertila.y,length,length);
-    if (chertila.y>canvas.height)rotateImg(img,0,chertila.x,canvas.height-length/2,length,length);
-}
-
-
-
-function gameOver() {
-    clearInterval(setI);
-    ctx.fillStyle = `black`
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = `red`;
-    ctx.font = "100px Georgia";
-    ctx.fillText("Game Over", 400, 400);
-    crab.ableToShout = false;
-
-}
-
-
-function createChertila(chertilaType) {
-    let c = Math.round(Math.random() * 3);
-    let x, y;
-    if (c === 0) {
-        x = -100;
-        y = Math.random() * canvas.height;
-    } else if (c === 1) {
-        x = Math.random() * canvas.width;
-        y = -100;
-    } else if (c === 2) {
-        x = canvas.width + 100;
-        y = Math.random() * canvas.height;
-    } else if (c === 3) {
-        x = Math.random() * canvas.width;
-        y = canvas.height + 100;
-    }
-    if (chertilaType.toLowerCase() === `sponge`) chertilas.add(new Sponge(x, y, 0));
-    else if (chertilaType.toLowerCase() === `frog`) chertilas.add(new Frog(x, y, 0));
-}
 
 
 
