@@ -136,21 +136,21 @@ class Stone extends Batko {
         this.parent = parent;
     }
 }
-
 let stones = new Set();
 
+
 class Sponge extends Batko {
-    constructor(x, y, angle, speed = macDiagonal13,
-                width = canvas.width / 57, height = canvas.height * 50 / 773, imgSrc = `img/sponge.png`) {
-        super(x, y, angle, speed, width, height, imgSrc);
+    constructor(x, y, angle,) {
+        super(x, y, angle,   macDiagonal13,  canvas.width / 57,
+             canvas.height * 50 / 773,  `img/sponge.png`);
         this.type = `sponge`;
     }
 }
 
 class Frog extends Batko {
-    constructor(x, y, angle, speed = 0.5 * macDiagonal13,
-                width = canvas.width * 47 / 1425, height = canvas.height * 50 / 773, imgSrc = `img/frogOchka.png`) {
-        super(x, y, angle, speed, width, height, imgSrc);
+    constructor(x, y, angle) {
+        super(x, y, angle,  0.5 * macDiagonal13, canvas.width * 47 / 1425,
+            canvas.height * 50 / 773,  `img/frogOchka.png`);
         this.type = `frog`;
         this.ableToShoot = true;
     }
@@ -160,7 +160,6 @@ class Frog extends Batko {
             let speed = this.speed;
             this.speed = 0;
             this.ableToShoot= false;
-            console.log(chertilas.has(this));
             setTimeout(()=>{
                 if(chertilas.has(this)) {
                     this.speed = speed;
@@ -249,6 +248,7 @@ function drawGame() {
         }
     }
 
+    
 
     for (let chertila of chertilas) {
         if(chertila.type === `sponge`) navigator(chertila);
@@ -260,6 +260,7 @@ function drawGame() {
             crab.life--;
             if (!crab.life) gameOver();
         }
+        drawWarning(chertila);
     }
 
     for (let stone of stones){
@@ -380,10 +381,19 @@ function simpleNavigator(object) {
     object.x += Math.sin(object.angle) * object.speed;
     object.y -= Math.cos(object.angle) * object.speed;
 
-    if (object.x < 0 || object.x > canvas.width || object.y < 0 || object.y > canvas.height) {
+    if (!inField(object)) {
         bullets.delete(object);
         stones.delete(object);
     }
+}
+function drawWarning(chertila) {
+    let img = new Image();
+    length = 50;
+    img.src = `img/warning.png`;
+    if (chertila.x<0)rotateImg(img,0,length/2,chertila.y,length,length);
+    if (chertila.y<0)rotateImg(img,0,chertila.x,length/2,length,length);
+    if (chertila.x>canvas.width)rotateImg(img,0,canvas.width-length/2,chertila.y,length,length);
+    if (chertila.y>canvas.height)rotateImg(img,0,chertila.x,canvas.height-length/2,length,length);
 }
 
 
